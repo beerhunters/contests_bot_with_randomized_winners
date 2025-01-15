@@ -6,28 +6,31 @@ from aiogram.types import BotCommand
 
 from dotenv import load_dotenv
 
-
-# from handlers import user
+from handlers.start import start_router
 from logger import logger
-# from loguru import logger
 
 
 async def main():
-    """Главная функция для запуска бота."""
+    """
+    The main function to start the bot
+    """
+
     load_dotenv()
     bot = Bot(
         token=os.getenv("TELEGRAM_TOKEN"),
     )
     dp = Dispatcher()
 
-    # Регистрация обработчиков
-    # dp.include_router(user)
+    # Handler registration
+    dp.include_router(start_router)
+
+    # Commands registration
     bot_commands = [BotCommand(command="/start", description="Перезапустить бота")]
     await bot.set_my_commands(bot_commands)
 
-    # Запуск бота
+    # Starting the bot
     try:
-        logger.info("Бот запущен...")
+        logger.info("Бот запущен и работает...")
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Ошибка при работе бота: {e}")
