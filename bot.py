@@ -6,6 +6,7 @@ from aiogram.types import BotCommand
 
 from dotenv import load_dotenv
 
+from database.models import init_db
 from handlers.start import start_router
 from middlewares.localization import L10nMiddleware
 from tools.logger import logger
@@ -15,6 +16,8 @@ async def main():
     """
     The main function to start the bot
     """
+    # Инициализация базы данных
+    await init_db()  # Создание таблиц, если их нет
 
     load_dotenv()
     bot = Bot(

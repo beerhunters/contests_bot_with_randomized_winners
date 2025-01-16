@@ -5,7 +5,7 @@ from aiogram.types import Message
 from fluent.runtime import FluentLocalization
 
 import keyboards.keyboards as kb
-
+from database.requests import get_user_by_tg_id, add_user_to_db
 
 start_router = Router()
 
@@ -30,21 +30,13 @@ async def start_command(message: Message, state: FSMContext, l10n: FluentLocaliz
         user_tg_id = message.from_user.id
         user_name = message.from_user.username
         user_full_name = message.from_user.full_name
-
-        # # Проверяем пользователя в БД
-        # user = await get_user_by_tg_id(user_tg_id, db)
-        #
-        # if not user:
-        #     # Добавляем нового пользователя
-        #     await add_user_to_db(user_tg_id, user_name, user_full_name, language_code)
-        # else:
-        #     # Берем язык из БД
-        #     language_code = user.language
-
-        # Setting the default language
         language_code = message.from_user.language_code or "ru"
 
-        print(user_tg_id, user_name, user_full_name, language_code)
+        # Проверяем пользователя в БД
+        user = await get_user_by_tg_id(user_tg_id)
+
+        if not user:
+            await add_user_to_db(user_tg_id, user_name, user_full_name, language_code)
 
         await send_localized_message(
             message,
