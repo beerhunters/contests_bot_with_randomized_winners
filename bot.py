@@ -7,7 +7,8 @@ from aiogram.types import BotCommand
 from dotenv import load_dotenv
 
 from handlers.start import start_router
-from logger import logger
+from middlewares.localization import L10nMiddleware
+from tools.logger import logger
 
 
 async def main():
@@ -20,6 +21,10 @@ async def main():
         token=os.getenv("TELEGRAM_TOKEN"),
     )
     dp = Dispatcher()
+
+    # Middleware registration
+    dp.message.outer_middleware(L10nMiddleware(default_locale="ru"))
+    dp.callback_query.outer_middleware(L10nMiddleware(default_locale="ru"))
 
     # Handler registration
     dp.include_router(start_router)

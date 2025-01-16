@@ -1,16 +1,27 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
+from fluent.runtime import FluentLocalization
+
 import keyboards.keyboards as kb
-from logger import logger
-from tools.tools import get_text
+
 
 start_router = Router()
 
 
+async def send_localized_message(
+    message: Message, l10n: FluentLocalization, text_key: str, reply_markup=None
+):
+    """
+    Utility function to send a localized message.
+    """
+    localized_text = l10n.format_value(text_key)
+    await message.answer(localized_text, reply_markup=reply_markup)
+
+
 @start_router.message(CommandStart())
-async def start_command(message: Message, state: FSMContext):
+async def start_command(message: Message, state: FSMContext, l10n: FluentLocalization):
     """
     Command handler /start.
     """
@@ -34,68 +45,52 @@ async def start_command(message: Message, state: FSMContext):
         language_code = message.from_user.language_code or "ru"
 
         print(user_tg_id, user_name, user_full_name, language_code)
-        await state.update_data(language_code=language_code)
 
-        welcome_text = await get_text(language_code, "WELCOME_TEXT")
-        await message.answer(
-            welcome_text, reply_markup=await kb.start_menu(language_code)
+        await send_localized_message(
+            message,
+            l10n,
+            "welcome-text",
+            reply_markup=await kb.start_menu(l10n),
         )
 
 
-@start_router.message(F.text.in_({"🌍 Change language", "🌍 Сменить язык"}))
-async def prompt_language_change(message: Message, state: FSMContext):
-    data = await state.get_data()
-    language_code = data.get("language_code")
-    language_text = await get_text(language_code, "CHANGE_LANGUAGE")
-    await message.answer(
-        language_text,
-        reply_markup=await kb.language_keyboard(),
-    )
-
-
-@start_router.callback_query(F.data.startswith("lang_"))
-async def set_language(callback_query: CallbackQuery, state: FSMContext):
-    # Получаем выбранный язык
-    language_code = callback_query.data.split("_")[1]
-    await state.update_data(language_code=language_code)
-
-    user_tg_id = callback_query.from_user.id
-    # Обновляем язык в БД
-    # await update_user_language(user_tg_id, language_code)
-
-    await callback_query.message.delete()
-    welcome_text = await get_text(language_code, "WELCOME_TEXT")
-    await callback_query.message.answer(
-        welcome_text, reply_markup=await kb.start_menu(language_code)
-    )
-
-    # Подтверждаем обработку callback
-    language_update_text = await get_text(language_code, "LANGUAGE_UPDATE_TEXT")
-    await callback_query.answer(text=language_update_text, show_alert=False)
-
-
 @start_router.message(F.text.in_({"⁉️ Поддержка", "⁉️ Support"}))
-async def start_support(message: Message, state: FSMContext):
-    data = await state.get_data()
-    language_code = data.get("language_code")
-    support_text = await get_text(language_code, "SUPPORT")
-    await message.answer(
-        support_text, reply_markup=await kb.back_to_menu(language_code)
+async def start_support(message: Message, l10n: FluentLocalization):
+    """
+    Handler for the "Support" button.
+    """
+    await send_localized_message(
+        message,
+        l10n,
+        "support",
+        reply_markup=await kb.back_to_menu(l10n),
     )
 
 
 @start_router.message(F.text.in_({"👥 Пригласить друзей", "👥 Invite friends"}))
-async def back_to_menu(message: Message, state: FSMContext):
-    data = await state.get_data()
-    language_code = data.get("language_code")
-    invite_text = await get_text(language_code, "INVITE")
-    await message.answer(invite_text, reply_markup=await kb.back_to_menu(language_code))
+async def invite_friends(message: Message, l10n: FluentLocalization):
+    """
+    Handler for the "Invite friends" button.
+    """
+    await send_localized_message(
+        message,
+        l10n,
+        "invite",
+        reply_markup=await kb.back_to_menu(l10n),
+    )
 
 
 @start_router.message(F.text.in_({"↩️ Назад в главное меню", "↩️ Back to main menu"}))
-async def back_to_menu(message: Message, state: FSMContext):
-    data = await state.get_data()
-    language_code = data.get("language_code")
-    welcome_text = await get_text(language_code, "WELCOME_TEXT")
-    await message.answer(welcome_text, reply_markup=await kb.start_menu(language_code))
+async def back_to_main_menu(
+    message: Message, state: FSMContext, l10n: FluentLocalization
+):
+    """
+    Handler for returning to the main menu.
+    """
+    await send_localized_message(
+        message,
+        l10n,
+        "welcome-text",
+        reply_markup=await kb.start_menu(l10n),
+    )
     await state.clear()
