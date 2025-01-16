@@ -9,9 +9,7 @@ class CustomFormatter(logging.Formatter):
     red = "\x1b[31;1m"
     bold_red = "\x1b[41m"
     reset = "\x1b[0m"
-    format = (
-        "%(asctime)s | %(levelname)s | [%(filename)s:%(lineno)d] - %(message)s"
-    )
+    format = "%(asctime)s | %(levelname)s | [%(filename)s:%(lineno)d] - %(message)s"
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
@@ -35,7 +33,25 @@ handler.setFormatter(CustomFormatter())  # Используем кастомны
 
 # Настройка логгера
 logger = logging.getLogger()
+
+# Проверяем, если хендлеры уже добавлены, чтобы избежать дублирования
+if not logger.handlers:
+    logger.addHandler(handler)
+
 logger.setLevel(logging.DEBUG)  # Устанавливаем минимальный уровень логирования
-logging.getLogger('asyncio').setLevel(logging.WARNING)  # Устанавливаем уровень WARNING для asyncio
-logger.addHandler(handler)
+# Устанавливаем уровень логирования WARNING для asyncio
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+
+# Устанавливаем уровень логирования WARNING для sqlalchemy
+logging.getLogger("sqlalchemy").setLevel(
+    logging.ERROR
+)  # Устанавливаем уровень ERROR для всех компонентов
+
+# Исключаем логи для выполнения SQL-запросов в SQLAlchemy
+logging.getLogger("sqlalchemy.engine").setLevel(logging.ERROR)
+logging.getLogger("sqlalchemy.dialects").setLevel(
+    logging.ERROR
+)  # Исключаем логи диалектов базы данных
+
+# Отключаем прокачку логов в родительские логгеры
 logger.propagate = False

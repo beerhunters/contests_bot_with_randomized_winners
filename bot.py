@@ -7,9 +7,13 @@ from aiogram.types import BotCommand
 from dotenv import load_dotenv
 
 from database.models import init_db
+from handlers.contest import contest_router
 from handlers.start import start_router
 from middlewares.localization import L10nMiddleware
+
 from tools.logger import logger
+
+# from loguru import logger
 
 
 async def main():
@@ -30,7 +34,7 @@ async def main():
     dp.callback_query.outer_middleware(L10nMiddleware(default_locale="ru"))
 
     # Handler registration
-    dp.include_router(start_router)
+    dp.include_routers(start_router, contest_router)
 
     # Commands registration
     bot_commands = [BotCommand(command="/start", description="Перезапустить бота")]

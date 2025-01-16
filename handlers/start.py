@@ -1,23 +1,24 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, Giveaway, Chat
 from fluent.runtime import FluentLocalization
 
 import keyboards.keyboards as kb
 from database.requests import get_user_by_tg_id, add_user_to_db
+from tools.tools import send_localized_message
 
 start_router = Router()
 
 
-async def send_localized_message(
-    message: Message, l10n: FluentLocalization, text_key: str, reply_markup=None
-):
-    """
-    Utility function to send a localized message.
-    """
-    localized_text = l10n.format_value(text_key)
-    await message.answer(localized_text, reply_markup=reply_markup)
+# async def send_localized_message(
+#     message: Message, l10n: FluentLocalization, text_key: str, reply_markup=None
+# ):
+#     """
+#     Utility function to send a localized message.
+#     """
+#     localized_text = l10n.format_value(text_key)
+#     await message.answer(localized_text, reply_markup=reply_markup)
 
 
 @start_router.message(CommandStart())
@@ -39,10 +40,7 @@ async def start_command(message: Message, state: FSMContext, l10n: FluentLocaliz
             await add_user_to_db(user_tg_id, user_name, user_full_name, language_code)
 
         await send_localized_message(
-            message,
-            l10n,
-            "welcome-text",
-            reply_markup=await kb.start_menu(l10n),
+            message, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)
         )
 
 
@@ -52,10 +50,7 @@ async def start_support(message: Message, l10n: FluentLocalization):
     Handler for the "Support" button.
     """
     await send_localized_message(
-        message,
-        l10n,
-        "support",
-        reply_markup=await kb.back_to_menu(l10n),
+        message, l10n, "support", reply_markup=await kb.back_to_menu(l10n)
     )
 
 
@@ -65,10 +60,7 @@ async def invite_friends(message: Message, l10n: FluentLocalization):
     Handler for the "Invite friends" button.
     """
     await send_localized_message(
-        message,
-        l10n,
-        "invite",
-        reply_markup=await kb.back_to_menu(l10n),
+        message, l10n, "invite", reply_markup=await kb.back_to_menu(l10n)
     )
 
 
@@ -80,9 +72,6 @@ async def back_to_main_menu(
     Handler for returning to the main menu.
     """
     await send_localized_message(
-        message,
-        l10n,
-        "welcome-text",
-        reply_markup=await kb.start_menu(l10n),
+        message, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)
     )
     await state.clear()

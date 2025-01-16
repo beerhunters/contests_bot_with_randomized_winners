@@ -35,6 +35,16 @@ async def start_menu(l10n: FluentLocalization):
     )
 
 
+async def request_location_keyboard(l10n: FluentLocalization):
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=l10n.format_value("location"), request_location=True)]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
 async def back_to_menu(l10n: FluentLocalization):
     button_text = l10n.format_value("back-to-menu")
     return ReplyKeyboardMarkup(
