@@ -33,11 +33,11 @@ async def start_command(message: Message, state: FSMContext, l10n: FluentLocaliz
         user_full_name = message.from_user.full_name
         language_code = message.from_user.language_code or "ru"
 
-        # Проверяем пользователя в БД
-        user = await get_user_by_tg_id(user_tg_id)
-
-        if not user:
-            await add_user_to_db(user_tg_id, user_name, user_full_name, language_code)
+        # # Проверяем пользователя в БД
+        # user = await get_user_by_tg_id(user_tg_id)
+        #
+        # if not user:
+        #     await add_user_to_db(user_tg_id, user_name, user_full_name, language_code)
 
         await send_localized_message(
             message, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)

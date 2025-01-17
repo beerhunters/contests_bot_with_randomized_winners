@@ -2,6 +2,8 @@ import asyncio
 import os
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.types import BotCommand
 
 from dotenv import load_dotenv
@@ -19,11 +21,12 @@ async def main():
     The main function to start the bot
     """
     # Инициализация базы данных
-    await init_db()  # Создание таблиц, если их нет
+    # await init_db()
 
     load_dotenv()
     bot = Bot(
         token=os.getenv("TELEGRAM_TOKEN"),
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()
 

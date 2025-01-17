@@ -4,7 +4,9 @@ from aiogram.types import (
     # InlineKeyboardMarkup,
     # InlineKeyboardButton,
     KeyboardButtonRequestChat,
+    InlineKeyboardMarkup,
 )
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fluent.runtime import FluentLocalization
 
 
@@ -36,7 +38,7 @@ async def start_menu(l10n: FluentLocalization):
     )
 
 
-async def get_id(l10n):
+async def get_chat_id(l10n):
     buttons = [
         [
             KeyboardButton(
@@ -44,7 +46,7 @@ async def get_id(l10n):
                 request_chat=KeyboardButtonRequestChat(
                     request_id=0,
                     chat_is_channel=False,  # Включает только обычные группы (не каналы)
-                    chat_has_username=True,
+                    bot_is_member=True,
                 ),
             ),
             KeyboardButton(
@@ -92,3 +94,12 @@ async def back_to_menu(l10n: FluentLocalization):
 #             ]
 #         ]
 #     )
+
+
+async def get_publish_keyboard(l10n) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text=l10n.format_value("publish_now"), callback_data="publish_now")
+    keyboard.button(
+        text=l10n.format_value("schedule_post"), callback_data="schedule_post"
+    )
+    return keyboard.as_markup(row_width=2)
