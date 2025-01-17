@@ -1,8 +1,9 @@
 from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
+    # InlineKeyboardMarkup,
+    # InlineKeyboardButton,
+    KeyboardButtonRequestChat,
 )
 from fluent.runtime import FluentLocalization
 
@@ -33,6 +34,35 @@ async def start_menu(l10n: FluentLocalization):
         keyboard=keyboard_layout,
         resize_keyboard=True,
     )
+
+
+async def get_id(l10n):
+    buttons = [
+        [
+            KeyboardButton(
+                text=l10n.format_value("chat-id"),
+                request_chat=KeyboardButtonRequestChat(
+                    request_id=0,
+                    chat_is_channel=False,  # Включает только обычные группы (не каналы)
+                    chat_has_username=True,
+                ),
+            ),
+            KeyboardButton(
+                text=l10n.format_value("channel-id"),
+                request_chat=KeyboardButtonRequestChat(
+                    request_id=1, chat_is_channel=True  # Включает только каналы
+                ),
+            ),
+        ],
+    ]
+
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons,
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+    return keyboard
 
 
 async def request_location_keyboard(l10n: FluentLocalization):

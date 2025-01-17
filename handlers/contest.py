@@ -1,10 +1,11 @@
 import json
 
 from aiogram import Router, F
-from aiogram.enums import ContentType
+from aiogram.enums import ContentType, ChatMemberStatus
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message
+from aiogram.utils.formatting import Text
 from fluent.runtime import FluentLocalization
 
 from tools.tools import send_localized_message
@@ -27,16 +28,98 @@ class ContestState(StatesGroup):
 
 @contest_router.message(F.text.in_({"🎁 Создать конкурс", "🎁 Create giveaway"}))
 async def start_create(message: Message, state: FSMContext, l10n: FluentLocalization):
-    await send_localized_message(message, l10n, "contest_channel")
+    # await send_localized_message(message, l10n, "contest_channel")
+    await send_localized_message(
+        message, l10n, "contest_id", reply_markup=await kb.get_id(l10n)
+    )
     await state.set_state(ContestState.contest_channel)
 
 
-@contest_router.message(ContestState.contest_channel)
+# @contest_router.message(F.chat_shared, ContestState.contest_channel)
+# async def add_channel(message: Message, state: FSMContext, l10n: FluentLocalization):
+#     contest_channel = message.text.strip()
+#
+#     # Определяем chat_id
+#     if contest_channel.startswith("@"):
+#         chat_id = contest_channel  # Публичный юзернейм
+#     elif contest_channel.lstrip("-").isdigit():
+#         chat_id = int(contest_channel)  # Приватный ID канала
+#     else:
+#         await send_localized_message(message, l10n, "error_invalid_channel")
+#         return
+#
+#     try:
+#         # Получаем информацию о боте в указанном чате
+#         chat_member = await message.bot.get_chat_member(
+#             chat_id=chat_id, user_id=message.bot.id
+#         )
+#
+#         # Проверяем, является ли бот администратором
+#         if chat_member.status not in [
+#             ChatMemberStatus.ADMINISTRATOR,
+#             ChatMemberStatus.CREATOR,
+#         ]:
+#             await send_localized_message(message, l10n, "error_bot_not_admin")
+#             return
+#     except Exception as e:
+#         # Обработка ошибок
+#         if "chat not found" in str(e).lower():
+#             await send_localized_message(message, l10n, "error_invalid_channel")
+#         elif "access denied" in str(e).lower():
+#             await send_localized_message(message, l10n, "error_bot_not_in_chat")
+#         else:
+#             await send_localized_message(message, l10n, "error_unexpected")
+#         return
+#
+#     # Сохраняем данные и переходим к следующему состоянию
+#     await state.update_data(contest_channel=contest_channel)
+#     await send_localized_message(message, l10n, "contest_text")
+#     await state.set_state(ContestState.contest_text)
+
+
+@contest_router.message(F.chat_shared, ContestState.contest_channel)
 async def add_channel(message: Message, state: FSMContext, l10n: FluentLocalization):
+    chat_id = int(message.chat_shared.chat_id)
 
-    contest_channel = message.text
-    await state.update_data(contest_channel=contest_channel)
+    try:
+        # Получаем информацию о боте в указанном чате
+        chat_member = await message.bot.get_chat_member(
+            chat_id=chat_id, user_id=message.bot.id
+        )
 
+        # Проверяем, является ли бот администратором
+        if chat_member.status not in [
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.CREATOR,
+        ]:
+            await send_localized_message(
+                message, l10n, "error_bot_not_admin", reply_markup=await kb.get_id(l10n)
+            )
+            return
+    except Exception as e:
+        # Обработка ошибок
+        if "chat not found" in str(e).lower():
+            await send_localized_message(
+                message,
+                l10n,
+                "error_invalid_channel",
+                reply_markup=await kb.get_id(l10n),
+            )
+        elif "access denied" in str(e).lower():
+            await send_localized_message(
+                message,
+                l10n,
+                "error_bot_not_in_chat",
+                reply_markup=await kb.get_id(l10n),
+            )
+        else:
+            await send_localized_message(
+                message, l10n, "error_unexpected", reply_markup=await kb.get_id(l10n)
+            )
+        return
+
+    # Сохраняем данные и переходим к следующему состоянию
+    await state.update_data(contest_channel=chat_id)
     await send_localized_message(message, l10n, "contest_text")
     await state.set_state(ContestState.contest_text)
 
@@ -59,7 +142,7 @@ async def add_file(message: Message, state: FSMContext, l10n: FluentLocalization
         file_type = message.content_type
         await state.update_data(file_id=file_id, file_type=file_type)
     else:
-        pass
+        print(message)
     await send_localized_message(message, l10n, "contest_winners_count")
     await state.set_state(ContestState.contest_winners_count)
 

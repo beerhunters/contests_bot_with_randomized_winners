@@ -13,8 +13,6 @@ from middlewares.localization import L10nMiddleware
 
 from tools.logger import logger
 
-# from loguru import logger
-
 
 async def main():
     """
