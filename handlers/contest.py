@@ -1,7 +1,8 @@
+import html
 import json
 
 from aiogram import Router, F
-from aiogram.enums import ContentType, ChatMemberStatus
+from aiogram.enums import ContentType, ChatMemberStatus, ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery
@@ -347,45 +348,48 @@ async def add_end_date(
 @contest_router.message(ContestState.contest_end_time)
 async def add_end_time(message: Message, state: FSMContext, l10n: FluentLocalization):
     try:
-        # Парсим время, введенное пользователем
-        end_time = datetime.strptime(message.text, "%H:%M").time()
+        # Парсим время, введённое пользователем
+        # print(f"Raw input: {message.text}")
+        end_time = datetime.strptime(message.text.strip(), "%H:%M").time()
+        # print(f"Parsed end_time: {end_time}")
+
+        # Получаем данные из состояния
         data = await state.get_data()
+
+        # Преобразуем даты и время из формата `"%d.%m.%Y"` и `"%H:%M"`
         post_time = datetime.strptime(data["post_time"], "%H:%M").time()
+        post_date = datetime.strptime(data["post_date"], "%d.%m.%Y").date()
+        end_date = datetime.strptime(data["end_date"], "%d.%m.%Y").date()
+        # print(f"Post time: {post_time}, Post date: {post_date}, End date: {end_date}")
 
-        # Преобразуем время в datetime для вычислений
-        today = datetime.now().date()
-        end_datetime = datetime.combine(today, end_time)
-        post_datetime = datetime.combine(today, post_time)
+        # Проверка на совпадение дат
+        if post_date == end_date:
+            post_datetime = datetime.combine(post_date, post_time)
+            end_datetime = datetime.combine(end_date, end_time)
 
-        # Если дата постинга и дата завершения совпадают, проверяем разницу во времени
-        if post_datetime.date() == end_datetime.date():
-            time_difference = end_datetime - post_datetime
-
-            # Если разница меньше 10 минут, показываем ошибку
-            if time_difference < timedelta(minutes=10):
-                await send_localized_message(message, l10n, "error_time_in_past")
+            # Проверяем разницу во времени
+            if end_datetime - post_datetime < timedelta(minutes=10):
+                await send_localized_message(message, l10n, "error_time_too_close")
                 return
 
-        # Если дата постинга раньше даты завершения, проверка времени не важна
-        elif post_datetime < end_datetime:
-            pass
+        elif post_date > end_date:
+            await send_localized_message(message, l10n, "error_invalid_date_order")
+            return
 
-        # Если все проверки пройдены, сохраняем данные
+        # Сохраняем данные, если все проверки пройдены
         await state.update_data(end_time=message.text)
         await send_localized_message(message, l10n, "contest_data_saved")
-
-        # Запрашиваем гео-данные
         await send_localized_message(
             message,
             l10n,
             "contest_geo_check_required",
             reply_markup=await kb.geo_check_required(l10n),
         )
-
         await state.set_state(ContestState.contest_location)
 
-    except ValueError:
-        # Если формат времени некорректный
+    except ValueError as e:
+        # Отладка ошибки
+        # print(f"ValueError occurred: {e}")
         await send_localized_message(message, l10n, "error_invalid_time_format")
 
 
@@ -575,14 +579,44 @@ async def contest_confirmation(
         for key, value in data.items()
     }
 
-    # Вывод данных для отладки
-    print(json.dumps(serialized_data, indent=4, ensure_ascii=False))
+    # # Вывод данных для отладки
+    # print(json.dumps(serialized_data, indent=4, ensure_ascii=False))
+
+    # # Здесь вы извлекаете количество участников из базы данных
+    # contest_id = data["contest_id"]  # Получаем ID конкурса
+    # session = Session()  # Создайте сессию для запроса
+    # participants_count = session.query(Participant).filter(Participant.contest_id == contest_id).count()
+
+    # Отправка данных в чат конкурса
+    contest_channel_id = int(data["contest_channel"])  # Преобразуем ID в int
+    contest_message = "<b>Данные конкурса:</b>\n"
+
+    # Форматируем данные для HTML-разметки
+    for key, value in serialized_data.items():
+        contest_message += (
+            f"<b>{key}:</b> {html.escape(str(value))}\n"  # Экранируем символы
+        )
+
+    # Отправка данных в чат
+    await callback.bot.send_message(
+        chat_id=contest_channel_id,
+        text=contest_message,
+        reply_markup=await kb.participation(l10n),
+        parse_mode=ParseMode.HTML,
+    )
+
     await callback.answer("🎉 Confirmation!", show_alert=True)
     if data["post"] == "now":
         await send_localized_message(callback, l10n, "publish_now_welcome")
     else:
-        await send_localized_message(callback, l10n, "schedule_welcome")
-        # print(data["post_time"])
+        post_date = data["post_time"].strftime("%d.%m.%Y")
+        post_time = data["post_time"].strftime("%H:%M")
+
+        # Формируем текст с локализацией
+        text = l10n.format_value(
+            "schedule_welcome", {"date": post_date, "time": post_time}
+        )
+        await callback.message.edit_text(text)
     await send_localized_message(
         callback, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)
     )

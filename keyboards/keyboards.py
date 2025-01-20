@@ -5,6 +5,7 @@ from aiogram.types import (
     # InlineKeyboardButton,
     KeyboardButtonRequestChat,
     InlineKeyboardMarkup,
+    InlineKeyboardButton,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fluent.runtime import FluentLocalization
@@ -86,9 +87,13 @@ async def get_publish_keyboard(l10n) -> InlineKeyboardMarkup:
 
 async def geo_check_required(l10n) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=l10n.format_value("geo_yes"), callback_data="geo_yes")
-    keyboard.button(text=l10n.format_value("geo_no"), callback_data="geo_no")
-    return keyboard.as_markup(row_width=1)
+    keyboard.row(  # Добавляем первую кнопку в строку
+        InlineKeyboardButton(text=l10n.format_value("geo_yes"), callback_data="geo_yes")
+    )
+    keyboard.row(  # Добавляем вторую кнопку в новую строку
+        InlineKeyboardButton(text=l10n.format_value("geo_no"), callback_data="geo_no")
+    )
+    return keyboard.as_markup()
 
 
 async def request_location_keyboard(l10n: FluentLocalization):
@@ -105,4 +110,24 @@ async def publish_now(l10n) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text=l10n.format_value("yes"), callback_data="yes")
     keyboard.button(text=l10n.format_value("no"), callback_data="no")
-    return keyboard.as_markup(row_width=1)
+    return keyboard.as_markup(row_width=2)
+
+
+async def participation(l10n) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(
+        text=l10n.format_value("participation"), callback_data="participation"
+    )
+    return keyboard.as_markup()
+
+
+# async def participation(l10n, participants_count: int) -> InlineKeyboardMarkup:
+#     keyboard = InlineKeyboardBuilder()
+#
+#     # Формируем текст с количеством участников
+#     participation_text = f"{l10n.format_value('participation')} ({participants_count})"
+#
+#     keyboard.button(
+#         text=participation_text, callback_data="participation"
+#     )
+#     return keyboard.as_markup()
