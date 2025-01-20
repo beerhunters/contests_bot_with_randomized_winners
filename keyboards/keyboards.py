@@ -14,10 +14,10 @@ from fluent.runtime import FluentLocalization
 async def start_menu(l10n: FluentLocalization):
     # Получаем локализованные тексты для кнопок
     buttons = [
-        l10n.format_value("menu-create-giveaway"),
-        l10n.format_value("menu-my-giveaways"),
-        l10n.format_value("menu-support"),
-        l10n.format_value("menu-invite-friends"),
+        l10n.format_value("menu_create_giveaway"),
+        l10n.format_value("menu_my_giveaways"),
+        l10n.format_value("menu_support"),
+        l10n.format_value("menu_invite_friends"),
     ]
 
     # Формируем ряды кнопок: 2 кнопки, 1 кнопка, 2 кнопки
@@ -43,7 +43,7 @@ async def get_chat_id(l10n, one_time_keyboard=True):
     buttons = [
         [
             KeyboardButton(
-                text=l10n.format_value("chat-id"),
+                text=l10n.format_value("chat_id"),
                 request_chat=KeyboardButtonRequestChat(
                     request_id=0,
                     chat_is_channel=False,  # Включает только обычные группы (не каналы)
@@ -51,7 +51,7 @@ async def get_chat_id(l10n, one_time_keyboard=True):
                 ),
             ),
             KeyboardButton(
-                text=l10n.format_value("channel-id"),
+                text=l10n.format_value("channel_id"),
                 request_chat=KeyboardButtonRequestChat(
                     request_id=1, chat_is_channel=True  # Включает только каналы
                 ),
@@ -69,7 +69,7 @@ async def get_chat_id(l10n, one_time_keyboard=True):
 
 
 async def back_to_menu(l10n: FluentLocalization):
-    button_text = l10n.format_value("back-to-menu")
+    button_text = l10n.format_value("back_to_menu")
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text=button_text)]],
         resize_keyboard=True,

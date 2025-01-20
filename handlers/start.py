@@ -40,7 +40,7 @@ async def start_command(message: Message, state: FSMContext, l10n: FluentLocaliz
         #     await add_user_to_db(user_tg_id, user_name, user_full_name, language_code)
 
         await send_localized_message(
-            message, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)
+            message, l10n, "welcome_text", reply_markup=await kb.start_menu(l10n)
         )
 
 
@@ -72,6 +72,6 @@ async def back_to_main_menu(
     Handler for returning to the main menu.
     """
     await send_localized_message(
-        message, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)
+        message, l10n, "welcome_text", reply_markup=await kb.start_menu(l10n)
     )
     await state.clear()

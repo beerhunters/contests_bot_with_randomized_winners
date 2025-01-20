@@ -216,7 +216,6 @@ async def add_post_date(
     post_date = datetime.now().strftime("%d.%m.%Y")
     post_time = datetime.now().strftime("%H:%M")
     await state.update_data(post_date=post_date, post_time=post_time, post="now")
-    # по кол-ву участников или по времени
     await send_localized_message(callback, l10n, "contest_data_saved", show_alert=True)
     calendar = cl.CustomCalendar()
     await send_localized_message(
@@ -560,6 +559,8 @@ async def add_required_channels(
 async def contest_confirmation(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
+    await callback.answer("🎉 Confirmation!", show_alert=True)
+    # Здесь надо сохранить все в БД и дальше работать с данными из БД
     data = await state.get_data()
     if data["post_time"] == "now":
         data["post_time"] = await get_current_datetime()
@@ -578,15 +579,6 @@ async def contest_confirmation(
         )
         for key, value in data.items()
     }
-
-    # # Вывод данных для отладки
-    # print(json.dumps(serialized_data, indent=4, ensure_ascii=False))
-
-    # # Здесь вы извлекаете количество участников из базы данных
-    # contest_id = data["contest_id"]  # Получаем ID конкурса
-    # session = Session()  # Создайте сессию для запроса
-    # participants_count = session.query(Participant).filter(Participant.contest_id == contest_id).count()
-
     # Отправка данных в чат конкурса
     contest_channel_id = int(data["contest_channel"])  # Преобразуем ID в int
     contest_message = "<b>Данные конкурса:</b>\n"
@@ -596,18 +588,15 @@ async def contest_confirmation(
         contest_message += (
             f"<b>{key}:</b> {html.escape(str(value))}\n"  # Экранируем символы
         )
-
-    # Отправка данных в чат
-    await callback.bot.send_message(
-        chat_id=contest_channel_id,
-        text=contest_message,
-        reply_markup=await kb.participation(l10n),
-        parse_mode=ParseMode.HTML,
-    )
-
-    await callback.answer("🎉 Confirmation!", show_alert=True)
     if data["post"] == "now":
         await send_localized_message(callback, l10n, "publish_now_welcome")
+        # Отправка данных в чат
+        await callback.bot.send_message(
+            chat_id=contest_channel_id,
+            text=contest_message,
+            reply_markup=await kb.participation(l10n),
+            parse_mode=ParseMode.HTML,
+        )
     else:
         post_date = data["post_time"].strftime("%d.%m.%Y")
         post_time = data["post_time"].strftime("%H:%M")
@@ -617,8 +606,16 @@ async def contest_confirmation(
             "schedule_welcome", {"date": post_date, "time": post_time}
         )
         await callback.message.edit_text(text)
+
+        # Нужна логика отложенных сообщений, пока заглушка
+        await callback.bot.send_message(
+            chat_id=contest_channel_id,
+            text=text,
+            parse_mode=ParseMode.HTML,
+        )
+
     await send_localized_message(
-        callback, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)
+        callback, l10n, "welcome_text", reply_markup=await kb.start_menu(l10n)
     )
     await state.clear()
 
@@ -644,7 +641,7 @@ async def contest_confirmation(
 ):
     await callback.answer("☹️ Okay..", show_alert=True)
     await send_localized_message(
-        callback, l10n, "welcome-text", reply_markup=await kb.start_menu(l10n)
+        callback, l10n, "welcome_text", reply_markup=await kb.start_menu(l10n)
     )
     await state.clear()
 

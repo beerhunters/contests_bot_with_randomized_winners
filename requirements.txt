@@ -14,6 +14,8 @@ click==8.1.8
 fluent.runtime==0.4.0
 fluent.syntax==0.19.0
 frozenlist==1.5.0
+geographiclib==2.0
+geopy==2.4.1
 greenlet==3.1.1
 idna==3.10
 loguru==0.7.3
@@ -34,7 +36,3 @@ SQLAlchemy==2.0.37
 typing_extensions==4.12.2
 urllib3==2.3.0
 yarl==1.18.3
-
-pip~=24.3.1
-geopy~=2.4.1
-geographiclib~=2.0

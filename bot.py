@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from database.models import init_db
 from handlers.contest import contest_router
+from handlers.contest_for_users import contest_for_users
 from handlers.my_contest import my_contest_router
 from handlers.start import start_router
 from middlewares.localization import L10nMiddleware
@@ -36,7 +37,9 @@ async def main():
     dp.callback_query.outer_middleware(L10nMiddleware(default_locale="ru"))
 
     # Handler registration
-    dp.include_routers(start_router, contest_router, my_contest_router)
+    dp.include_routers(
+        start_router, contest_router, my_contest_router, contest_for_users
+    )
 
     # Commands registration
     bot_commands = [BotCommand(command="/start", description="Запустить бота")]
