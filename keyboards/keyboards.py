@@ -38,7 +38,7 @@ async def start_menu(l10n: FluentLocalization):
     )
 
 
-async def get_chat_id(l10n):
+async def get_chat_id(l10n, one_time_keyboard=True):
     buttons = [
         [
             KeyboardButton(
@@ -61,10 +61,34 @@ async def get_chat_id(l10n):
     keyboard = ReplyKeyboardMarkup(
         keyboard=buttons,
         resize_keyboard=True,
-        one_time_keyboard=True,
+        one_time_keyboard=one_time_keyboard,
     )
 
     return keyboard
+
+
+async def back_to_menu(l10n: FluentLocalization):
+    button_text = l10n.format_value("back-to-menu")
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=button_text)]],
+        resize_keyboard=True,
+    )
+
+
+async def get_publish_keyboard(l10n) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text=l10n.format_value("publish_now"), callback_data="publish_now")
+    keyboard.button(
+        text=l10n.format_value("schedule_post"), callback_data="schedule_post"
+    )
+    return keyboard.as_markup(row_width=2)
+
+
+async def geo_check_required(l10n) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text=l10n.format_value("geo_yes"), callback_data="geo_yes")
+    keyboard.button(text=l10n.format_value("geo_no"), callback_data="geo_no")
+    return keyboard.as_markup(row_width=1)
 
 
 async def request_location_keyboard(l10n: FluentLocalization):
@@ -77,29 +101,8 @@ async def request_location_keyboard(l10n: FluentLocalization):
     )
 
 
-async def back_to_menu(l10n: FluentLocalization):
-    button_text = l10n.format_value("back-to-menu")
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=button_text)]],
-        resize_keyboard=True,
-    )
-
-
-# async def language_keyboard():
-#     return InlineKeyboardMarkup(
-#         inline_keyboard=[
-#             [
-#                 InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru"),
-#                 InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en"),
-#             ]
-#         ]
-#     )
-
-
-async def get_publish_keyboard(l10n) -> InlineKeyboardMarkup:
+async def publish_now(l10n) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=l10n.format_value("publish_now"), callback_data="publish_now")
-    keyboard.button(
-        text=l10n.format_value("schedule_post"), callback_data="schedule_post"
-    )
-    return keyboard.as_markup(row_width=2)
+    keyboard.button(text=l10n.format_value("yes"), callback_data="yes")
+    keyboard.button(text=l10n.format_value("no"), callback_data="no")
+    return keyboard.as_markup(row_width=1)

@@ -27,6 +27,7 @@ async def send_localized_message(
     l10n: FluentLocalization,
     text_key: str,
     reply_markup=ReplyKeyboardRemove(),
+    show_alert: bool = False,
 ):
     """
     Utility function to send a localized message.
@@ -38,7 +39,7 @@ async def send_localized_message(
     if isinstance(message_or_callback, CallbackQuery):
         # Ответ на CallbackQuery
         await message_or_callback.message.answer(
-            localized_text, reply_markup=reply_markup
+            localized_text, reply_markup=reply_markup, show_alert=show_alert
         )
         # Закрываем всплывающее уведомление
         await message_or_callback.answer()
