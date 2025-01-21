@@ -20,8 +20,8 @@ import keyboards.keyboards as kb
 import keyboards.calendar_keyboard.custom_calendar as cl
 
 contest_router = Router()
-time_picker = TimePicker()
-calendar = cl.CustomCalendar()
+# time_picker = TimePicker()
+# calendar = cl.CustomCalendar()
 
 
 class CState(StatesGroup):
@@ -218,7 +218,7 @@ async def add_post_date(
 async def add_post_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
-    # calendar = cl.CustomCalendar()
+    calendar = cl.CustomCalendar()
     selected_date = await calendar.handle_callback(callback, l10n=l10n)
 
     if selected_date:
@@ -231,7 +231,7 @@ async def add_post_date(
                 callback, l10n, "contest_data_saved", show_alert=True
             )
             await callback.answer()
-            # time_picker = TimePicker()
+            time_picker = TimePicker()
             await send_localized_message(
                 callback,
                 l10n,
@@ -246,48 +246,90 @@ async def add_post_date(
             )
 
 
-# @contest_router.callback_query(TimeCallback.filter(), CState.contest_post_time)
-@contest_router.message(CState.contest_post_time)
-async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocalization):
-    # async def add_post_time(
-    #     callback: CallbackQuery,
-    #     state: FSMContext,
-    #     l10n: FluentLocalization,
-    #     callback_data: TimeCallback,
-    # ):
-    try:
-        # post_time = await time_picker.handle_time_callback(callback, callback_data)
-        # print(post_time)
-        # Получаем текущее время
-        now = datetime.now()
+# # @contest_router.callback_query(TimeCallback.filter(), CState.contest_post_time)
+# @contest_router.message(CState.contest_post_time)
+# async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocalization):
+#     # async def add_post_time(
+#     #     callback: CallbackQuery,
+#     #     state: FSMContext,
+#     #     l10n: FluentLocalization,
+#     #     callback_data: TimeCallback,
+#     # ):
+#     try:
+#         # post_time = await time_picker.handle_time_callback(callback, callback_data)
+#         # print(post_time)
+#         # Получаем текущее время
+#         now = datetime.now()
+#
+#         # Парсим время, введенное пользователем
+#         post_time = datetime.strptime(message.text, "%H:%M").time()
+#         # post_time = datetime.strptime(post_time, "%H:%M").time()
+#         # print(post_time)
+#         # Проверяем, что введенное время больше текущего
+#         if post_time > now.time():
+#             await state.update_data(post_time=message.text)
+#             await send_localized_message(message, l10n, "contest_data_saved")
+#             # Отправляем календарь для выбора даты окончания
+#             # calendar = cl.CustomCalendar()
+#             await send_localized_message(
+#                 message,
+#                 l10n,
+#                 "get_end_date",
+#                 reply_markup=await calendar.generate_calendar(
+#                     now.year,
+#                     now.month,
+#                     l10n=l10n,
+#                 ),
+#             )
+#             await state.set_state(CState.contest_end_date)
+#         else:
+#             # Время введено некорректно
+#             await send_localized_message(message, l10n, "error_time_in_past")
+#     except ValueError:
+#         # Если формат времени некорректный
+#         await send_localized_message(message, l10n, "error_invalid_time_format")
 
-        # Парсим время, введенное пользователем
-        post_time = datetime.strptime(message.text, "%H:%M").time()
-        # post_time = datetime.strptime(post_time, "%H:%M").time()
-        # print(post_time)
-        # Проверяем, что введенное время больше текущего
-        if post_time > now.time():
-            await state.update_data(post_time=message.text)
-            await send_localized_message(message, l10n, "contest_data_saved")
-            # Отправляем календарь для выбора даты окончания
-            # calendar = cl.CustomCalendar()
-            await send_localized_message(
-                message,
-                l10n,
-                "get_end_date",
-                reply_markup=await calendar.generate_calendar(
-                    now.year,
-                    now.month,
-                    l10n=l10n,
-                ),
-            )
-            await state.set_state(CState.contest_end_date)
-        else:
-            # Время введено некорректно
-            await send_localized_message(message, l10n, "error_time_in_past")
+
+@contest_router.callback_query(TimeCallback.filter(), CState.contest_post_time)
+async def add_post_time(
+    callback: CallbackQuery,
+    state: FSMContext,
+    l10n: FluentLocalization,
+    callback_data: TimeCallback,
+):
+    time_picker = TimePicker()
+    post_time = await time_picker.handle_time_callback(callback, callback_data)
+    try:
+        if post_time:
+            # Получаем текущее время
+            now = datetime.now()
+            # Парсим время, введенное пользователем
+            post_time = datetime.strptime(post_time, "%H:%M").time()
+            # Проверяем, что введенное время больше текущего
+            if post_time > now.time():
+                # Сохраняем данные, если все проверки пройдены
+                post_time = post_time.strftime("%H:%M")
+                await state.update_data(post_time=post_time)
+                await send_localized_message(callback, l10n, "contest_data_saved")
+                # Отправляем календарь для выбора даты окончания
+                calendar = cl.CustomCalendar()
+                await send_localized_message(
+                    callback,
+                    l10n,
+                    "get_end_date",
+                    reply_markup=await calendar.generate_calendar(
+                        now.year,
+                        now.month,
+                        l10n=l10n,
+                    ),
+                )
+                await state.set_state(CState.contest_end_date)
+            else:
+                # Время введено некорректно
+                await send_localized_message(callback, l10n, "error_time_in_past")
     except ValueError:
         # Если формат времени некорректный
-        await send_localized_message(message, l10n, "error_invalid_time_format")
+        await send_localized_message(callback, l10n, "error_invalid_time_format")
 
 
 # @contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_end_date)
@@ -295,7 +337,7 @@ async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocaliz
 async def add_end_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
-    # calendar = cl.CustomCalendar()
+    calendar = cl.CustomCalendar()
     selected_date = await calendar.handle_callback(callback, l10n=l10n)
 
     if selected_date:
@@ -312,6 +354,7 @@ async def add_end_date(
                 callback, l10n, "contest_data_saved", show_alert=True
             )
             await callback.answer()
+            time_picker = TimePicker()
             await send_localized_message(
                 callback,
                 l10n,
@@ -378,16 +421,13 @@ async def add_end_time(
     l10n: FluentLocalization,
     callback_data: TimeCallback,
 ):
+    time_picker = TimePicker()
+    # Получаем время из обработчика
+    end_time = await time_picker.handle_time_callback(callback, callback_data)
     try:
-        # Получаем время из обработчика
-        end_time = await time_picker.handle_time_callback(callback, callback_data)
         if end_time:
-
-            # print(f"Received end time: {end_time}")
-
             # Преобразуем строку в объект времени
             end_time = datetime.strptime(end_time, "%H:%M").time()
-            # print(f"Received end time after datetime.strptime: {end_time}")
             # Получаем данные из состояния
             data = await state.get_data()
 
@@ -424,8 +464,6 @@ async def add_end_time(
             await state.set_state(CState.contest_location)
 
     except ValueError as e:
-        # Отладка ошибки
-        # print(f"ValueError occurred: {e}")
         await send_localized_message(callback, l10n, "error_invalid_time_format")
 
 

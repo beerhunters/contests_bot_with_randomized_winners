@@ -459,7 +459,7 @@ class CustomCalendar:
                 ),
                 InlineKeyboardButton(text=month_name, callback_data="noop"),
                 InlineKeyboardButton(
-                    text="<",
+                    text=">",
                     callback_data=CalendarCallback(
                         action="next_month", year=year, month=month
                     ).pack(),
