@@ -208,7 +208,8 @@ async def add_post_date(
     )
 
 
-@contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_post_date)
+# @contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_post_date)
+@contest_router.callback_query(cl.CalendarCallback.filter(), CState.contest_post_date)
 async def add_post_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -232,6 +233,21 @@ async def add_post_date(
             await callback.answer(
                 l10n.format_value("error_date_in_past"), show_alert=True
             )
+
+
+# @start_router.message(CommandStart())
+# async def cmd_start(message: Message):
+#     time_picker = TimePicker()
+#     await message.answer(
+#         "Выберите время:", reply_markup=await time_picker.create_time_keyboard()
+#     )
+#
+#
+# @start_router.callback_query(TimeCallback.filter())
+# async def time_callback_handler(callback: CallbackQuery, callback_data: TimeCallback):
+#     time_picker = TimePicker()
+#     selected_time = await time_picker.handle_callback(callback, callback_data)
+#     print(selected_time)
 
 
 @contest_router.message(CState.contest_post_time)
@@ -268,7 +284,8 @@ async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocaliz
         await send_localized_message(message, l10n, "error_invalid_time_format")
 
 
-@contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_end_date)
+# @contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_end_date)
+@contest_router.callback_query(cl.CalendarCallback.filter(), CState.contest_end_date)
 async def add_end_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):

@@ -1,24 +1,13 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, Giveaway, Chat
+from aiogram.types import Message
 from fluent.runtime import FluentLocalization
 
 import keyboards.keyboards as kb
-from database.requests import get_user_by_tg_id, add_user_to_db
 from tools.tools import send_localized_message
 
 start_router = Router()
-
-
-# async def send_localized_message(
-#     message: Message, l10n: FluentLocalization, text_key: str, reply_markup=None
-# ):
-#     """
-#     Utility function to send a localized message.
-#     """
-#     localized_text = l10n.format_value(text_key)
-#     await message.answer(localized_text, reply_markup=reply_markup)
 
 
 @start_router.message(CommandStart())
