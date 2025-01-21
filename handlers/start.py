@@ -1,10 +1,11 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from fluent.runtime import FluentLocalization
 
 import keyboards.keyboards as kb
+from keyboards.time_keyboard.custom_time_kb import TimePicker, TimeCallback
 from tools.tools import send_localized_message
 
 start_router = Router()

@@ -1,3 +1,5 @@
+import json
+
 from aiogram import Router, F
 from aiogram.enums import ContentType, ChatMemberStatus
 from aiogram.fsm.context import FSMContext
@@ -12,11 +14,14 @@ from handlers.handle_contest import (
     save_contest_to_db,
     schedule_contest_post,
 )
+from keyboards.time_keyboard.custom_time_kb import TimePicker, TimeCallback
 from tools.tools import send_localized_message, get_current_datetime
 import keyboards.keyboards as kb
 import keyboards.calendar_keyboard.custom_calendar as cl
 
 contest_router = Router()
+time_picker = TimePicker()
+calendar = cl.CustomCalendar()
 
 
 class CState(StatesGroup):
@@ -213,7 +218,7 @@ async def add_post_date(
 async def add_post_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
-    calendar = cl.CustomCalendar()
+    # calendar = cl.CustomCalendar()
     selected_date = await calendar.handle_callback(callback, l10n=l10n)
 
     if selected_date:
@@ -226,7 +231,13 @@ async def add_post_date(
                 callback, l10n, "contest_data_saved", show_alert=True
             )
             await callback.answer()
-            await send_localized_message(callback, l10n, "get_post_time")
+            # time_picker = TimePicker()
+            await send_localized_message(
+                callback,
+                l10n,
+                "get_post_time",
+                reply_markup=await time_picker.create_time_keyboard(),
+            )
             await state.set_state(CState.contest_post_time)
         else:
             # Если дата меньше сегодняшней, показываем сообщение об ошибке
@@ -235,36 +246,31 @@ async def add_post_date(
             )
 
 
-# @start_router.message(CommandStart())
-# async def cmd_start(message: Message):
-#     time_picker = TimePicker()
-#     await message.answer(
-#         "Выберите время:", reply_markup=await time_picker.create_time_keyboard()
-#     )
-#
-#
-# @start_router.callback_query(TimeCallback.filter())
-# async def time_callback_handler(callback: CallbackQuery, callback_data: TimeCallback):
-#     time_picker = TimePicker()
-#     selected_time = await time_picker.handle_callback(callback, callback_data)
-#     print(selected_time)
-
-
+# @contest_router.callback_query(TimeCallback.filter(), CState.contest_post_time)
 @contest_router.message(CState.contest_post_time)
 async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocalization):
+    # async def add_post_time(
+    #     callback: CallbackQuery,
+    #     state: FSMContext,
+    #     l10n: FluentLocalization,
+    #     callback_data: TimeCallback,
+    # ):
     try:
+        # post_time = await time_picker.handle_time_callback(callback, callback_data)
+        # print(post_time)
         # Получаем текущее время
         now = datetime.now()
 
         # Парсим время, введенное пользователем
         post_time = datetime.strptime(message.text, "%H:%M").time()
-
+        # post_time = datetime.strptime(post_time, "%H:%M").time()
+        # print(post_time)
         # Проверяем, что введенное время больше текущего
         if post_time > now.time():
             await state.update_data(post_time=message.text)
             await send_localized_message(message, l10n, "contest_data_saved")
             # Отправляем календарь для выбора даты окончания
-            calendar = cl.CustomCalendar()
+            # calendar = cl.CustomCalendar()
             await send_localized_message(
                 message,
                 l10n,
@@ -289,7 +295,7 @@ async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocaliz
 async def add_end_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
-    calendar = cl.CustomCalendar()
+    # calendar = cl.CustomCalendar()
     selected_date = await calendar.handle_callback(callback, l10n=l10n)
 
     if selected_date:
@@ -306,7 +312,12 @@ async def add_end_date(
                 callback, l10n, "contest_data_saved", show_alert=True
             )
             await callback.answer()
-            await send_localized_message(callback, l10n, "get_end_time")
+            await send_localized_message(
+                callback,
+                l10n,
+                "get_end_time",
+                reply_markup=await time_picker.create_time_keyboard(),
+            )
             await state.set_state(CState.contest_end_time)
         else:
             # Если selected_date меньше или равна post_date, отправляем сообщение об ошибке
@@ -315,49 +326,107 @@ async def add_end_date(
             )
 
 
-@contest_router.message(CState.contest_end_time)
-async def add_end_time(message: Message, state: FSMContext, l10n: FluentLocalization):
+# @contest_router.message(CState.contest_end_time)
+# async def add_end_time(message: Message, state: FSMContext, l10n: FluentLocalization):
+#     try:
+#         # Парсим время, введённое пользователем
+#         end_time = datetime.strptime(message.text.strip(), "%H:%M").time()
+#
+#         # Получаем данные из состояния
+#         data = await state.get_data()
+#
+#         # Преобразуем даты и время из формата `"%d.%m.%Y"` и `"%H:%M"`
+#         post_time = datetime.strptime(data["post_time"], "%H:%M").time()
+#         post_date = datetime.strptime(data["post_date"], "%d.%m.%Y").date()
+#         end_date = datetime.strptime(data["end_date"], "%d.%m.%Y").date()
+#
+#         # Проверка на совпадение дат
+#         if post_date == end_date:
+#             post_datetime = datetime.combine(post_date, post_time)
+#             end_datetime = datetime.combine(end_date, end_time)
+#
+#             # Проверяем разницу во времени
+#             if end_datetime - post_datetime < timedelta(minutes=10):
+#                 await send_localized_message(message, l10n, "error_time_too_close")
+#                 return
+#
+#         elif post_date > end_date:
+#             await send_localized_message(message, l10n, "error_invalid_date_order")
+#             return
+#
+#         # Сохраняем данные, если все проверки пройдены
+#         await state.update_data(end_time=message.text)
+#         await send_localized_message(message, l10n, "contest_data_saved")
+#         await send_localized_message(
+#             message,
+#             l10n,
+#             "contest_geo_check_required",
+#             reply_markup=await kb.geo_check_required(l10n),
+#         )
+#         await state.set_state(CState.contest_location)
+#
+#     except ValueError as e:
+#         # Отладка ошибки
+#         # print(f"ValueError occurred: {e}")
+#         await send_localized_message(message, l10n, "error_invalid_time_format")
+
+
+@contest_router.callback_query(TimeCallback.filter(), CState.contest_end_time)
+async def add_end_time(
+    callback: CallbackQuery,
+    state: FSMContext,
+    l10n: FluentLocalization,
+    callback_data: TimeCallback,
+):
     try:
-        # Парсим время, введённое пользователем
-        end_time = datetime.strptime(message.text.strip(), "%H:%M").time()
+        # Получаем время из обработчика
+        end_time = await time_picker.handle_time_callback(callback, callback_data)
+        if end_time:
 
-        # Получаем данные из состояния
-        data = await state.get_data()
+            # print(f"Received end time: {end_time}")
 
-        # Преобразуем даты и время из формата `"%d.%m.%Y"` и `"%H:%M"`
-        post_time = datetime.strptime(data["post_time"], "%H:%M").time()
-        post_date = datetime.strptime(data["post_date"], "%d.%m.%Y").date()
-        end_date = datetime.strptime(data["end_date"], "%d.%m.%Y").date()
+            # Преобразуем строку в объект времени
+            end_time = datetime.strptime(end_time, "%H:%M").time()
+            # print(f"Received end time after datetime.strptime: {end_time}")
+            # Получаем данные из состояния
+            data = await state.get_data()
 
-        # Проверка на совпадение дат
-        if post_date == end_date:
-            post_datetime = datetime.combine(post_date, post_time)
-            end_datetime = datetime.combine(end_date, end_time)
+            # Парсим время и дату из состояния
+            post_time = datetime.strptime(data["post_time"], "%H:%M").time()
+            post_date = datetime.strptime(data["post_date"], "%d.%m.%Y").date()
+            end_date = datetime.strptime(data["end_date"], "%d.%m.%Y").date()
 
-            # Проверяем разницу во времени
-            if end_datetime - post_datetime < timedelta(minutes=10):
-                await send_localized_message(message, l10n, "error_time_too_close")
+            # Проверка на совпадение дат
+            if post_date == end_date:
+                post_datetime = datetime.combine(post_date, post_time)
+                end_datetime = datetime.combine(end_date, end_time)
+
+                # Проверяем разницу во времени
+                if end_datetime - post_datetime < timedelta(minutes=10):
+                    await send_localized_message(callback, l10n, "error_time_too_close")
+                    return
+
+            elif post_date > end_date:
+                await send_localized_message(callback, l10n, "error_invalid_date_order")
                 return
 
-        elif post_date > end_date:
-            await send_localized_message(message, l10n, "error_invalid_date_order")
-            return
-
-        # Сохраняем данные, если все проверки пройдены
-        await state.update_data(end_time=message.text)
-        await send_localized_message(message, l10n, "contest_data_saved")
-        await send_localized_message(
-            message,
-            l10n,
-            "contest_geo_check_required",
-            reply_markup=await kb.geo_check_required(l10n),
-        )
-        await state.set_state(CState.contest_location)
+            # Сохраняем данные, если все проверки пройдены
+            end_time = end_time.strftime("%H:%M")
+            # print(f"Received end time before save data: {end_time}")
+            await state.update_data(end_time=end_time)
+            await send_localized_message(callback, l10n, "contest_data_saved")
+            await send_localized_message(
+                callback,
+                l10n,
+                "contest_geo_check_required",
+                reply_markup=await kb.geo_check_required(l10n),
+            )
+            await state.set_state(CState.contest_location)
 
     except ValueError as e:
         # Отладка ошибки
         # print(f"ValueError occurred: {e}")
-        await send_localized_message(message, l10n, "error_invalid_time_format")
+        await send_localized_message(callback, l10n, "error_invalid_time_format")
 
 
 @contest_router.callback_query(F.data == "geo_yes", CState.contest_location)
@@ -395,10 +464,10 @@ async def add_location(message: Message, state: FSMContext, l10n: FluentLocaliza
             # Сохраняем локацию во временное состояние FSM
             await state.update_data(latitude=latitude, longitude=longitude)
 
-            print(
-                f"Геолокация успешно сохранена:\n"
-                f"Широта: {latitude}\nДолгота: {longitude}",
-            )
+            # print(
+            #     f"Геолокация успешно сохранена:\n"
+            #     f"Широта: {latitude}\nДолгота: {longitude}",
+            # )
         else:
             # Если получен текст вместо локации
             await send_localized_message(message, l10n, "error_location_required")
@@ -411,7 +480,7 @@ async def add_location(message: Message, state: FSMContext, l10n: FluentLocaliza
 
     except Exception as e:
         # Логирование ошибки и сообщение пользователю
-        print(f"Ошибка обработки геолокации: {e}")
+        # print(f"Ошибка обработки геолокации: {e}")
         await send_localized_message(message, l10n, "error_processing_location")
 
 
@@ -460,7 +529,7 @@ async def add_prizes(message: Message, state: FSMContext, l10n: FluentLocalizati
 
     except Exception as e:
         # Обрабатываем любые непредвиденные ошибки
-        print(f"Ошибка обработки призов: {e}")
+        # print(f"Ошибка обработки призов: {e}")
         await send_localized_message(message, l10n, "error_processing_prizes")
 
 
@@ -519,7 +588,7 @@ async def add_required_channels(
             )
 
     except Exception as e:
-        print(f"Ошибка обработки каналов/групп: {e}")
+        # print(f"Ошибка обработки каналов/групп: {e}")
         await send_localized_message(message, l10n, "error_processing_channels")
 
 
@@ -592,7 +661,6 @@ async def contest_confirmation(
 ):
     await callback.answer("🎉 Confirmation!", show_alert=True)
     data = await state.get_data()
-
     # Обработка времени публикации
     if data["post"] == "now":
         data["post_time"] = await get_current_datetime()
@@ -605,7 +673,30 @@ async def contest_confirmation(
     )
 
     # Сохранение в базу данных
-    contest_id = await save_contest_to_db(data)
+    # contest_id = await save_contest_to_db(data)
+
+    # print(json.dumps(data, indent=4, ensure_ascii=False))
+
+    # {
+    #     "contest_channel": -1002350206500,
+    #     "required_channels": [
+    #         "-1002350206500"
+    #     ],
+    #     "contest_text": "Описание",
+    #     "file_id": null,
+    #     "file_type": null,
+    #     "winners_count": 1,
+    #     "post_date": "21.01.2025",
+    #     "post_time": "2025-01-21 17:24",
+    #     "post": "now",
+    #     "end_date": "22.01.2025",
+    #     "end_time": "22.01.2025 10:00",
+    #     "latitude": 59.942618,
+    #     "longitude": 30.25839,
+    #     "prizes": [
+    #         "Приз"
+    #     ]
+    # }
 
     contest_channel_id = int(data["contest_channel"])
 
