@@ -1,5 +1,4 @@
 import html
-import json
 
 from aiogram import Router, F
 from aiogram.enums import ContentType, ChatMemberStatus, ParseMode
@@ -10,6 +9,11 @@ from fluent.runtime import FluentLocalization
 
 from datetime import datetime, timedelta
 
+from handlers.handle_contest import (
+    send_contest_post,
+    save_contest_to_db,
+    schedule_contest_post,
+)
 from tools.tools import send_localized_message, get_current_datetime
 import keyboards.keyboards as kb
 import keyboards.calendar_keyboard.custom_calendar as cl
@@ -17,7 +21,7 @@ import keyboards.calendar_keyboard.custom_calendar as cl
 contest_router = Router()
 
 
-class ContestState(StatesGroup):
+class CState(StatesGroup):
     contest_channel = State()
     contest_text = State()
     contest_file = State()
@@ -39,53 +43,11 @@ async def start_create(message: Message, state: FSMContext, l10n: FluentLocaliza
     await send_localized_message(
         message, l10n, "contest_id", reply_markup=await kb.get_chat_id(l10n)
     )
-    await state.set_state(ContestState.contest_channel)
-
-
-# @contest_router.message(F.chat_shared, ContestState.contest_channel)
-# async def add_channel(message: Message, state: FSMContext, l10n: FluentLocalization):
-#     contest_channel = message.text.strip()
-#
-#     # Определяем chat_id
-#     if contest_channel.startswith("@"):
-#         chat_id = contest_channel  # Публичный юзернейм
-#     elif contest_channel.lstrip("-").isdigit():
-#         chat_id = int(contest_channel)  # Приватный ID канала
-#     else:
-#         await send_localized_message(message, l10n, "error_invalid_channel")
-#         return
-#
-#     try:
-#         # Получаем информацию о боте в указанном чате
-#         chat_member = await message.bot.get_chat_member(
-#             chat_id=chat_id, user_id=message.bot.id
-#         )
-#
-#         # Проверяем, является ли бот администратором
-#         if chat_member.status not in [
-#             ChatMemberStatus.ADMINISTRATOR,
-#             ChatMemberStatus.CREATOR,
-#         ]:
-#             await send_localized_message(message, l10n, "error_bot_not_admin")
-#             return
-#     except Exception as e:
-#         # Обработка ошибок
-#         if "chat not found" in str(e).lower():
-#             await send_localized_message(message, l10n, "error_invalid_channel")
-#         elif "access denied" in str(e).lower():
-#             await send_localized_message(message, l10n, "error_bot_not_in_chat")
-#         else:
-#             await send_localized_message(message, l10n, "error_unexpected")
-#         return
-#
-#     # Сохраняем данные и переходим к следующему состоянию
-#     await state.update_data(contest_channel=contest_channel)
-#     await send_localized_message(message, l10n, "contest_text")
-#     await state.set_state(ContestState.contest_text)
+    await state.set_state(CState.contest_channel)
 
 
 # Записываем информацию о канале, спрашиваем про описание
-@contest_router.message(F.chat_shared, ContestState.contest_channel)
+@contest_router.message(F.chat_shared, CState.contest_channel)
 async def add_channel(message: Message, state: FSMContext, l10n: FluentLocalization):
     chat_id = int(message.chat_shared.chat_id)
 
@@ -142,11 +104,11 @@ async def add_channel(message: Message, state: FSMContext, l10n: FluentLocalizat
 
     await send_localized_message(message, l10n, "contest_data_saved")
     await send_localized_message(message, l10n, "contest_text")
-    await state.set_state(ContestState.contest_text)
+    await state.set_state(CState.contest_text)
 
 
 # Записываем описание, спрашиваем про файл
-@contest_router.message(ContestState.contest_text)
+@contest_router.message(CState.contest_text)
 async def add_description(
     message: Message, state: FSMContext, l10n: FluentLocalization
 ):
@@ -154,11 +116,11 @@ async def add_description(
     await state.update_data(contest_text=contest_text)
     await send_localized_message(message, l10n, "contest_data_saved")
     await send_localized_message(message, l10n, "contest_file")
-    await state.set_state(ContestState.contest_file)
+    await state.set_state(CState.contest_file)
 
 
 # Записываем файл, спрашиваем про количество участников
-@contest_router.message(ContestState.contest_file)
+@contest_router.message(CState.contest_file)
 async def add_file(message: Message, state: FSMContext, l10n: FluentLocalization):
     if message.content_type == ContentType.PHOTO:
         file_id = message.photo[-1].file_id
@@ -183,11 +145,11 @@ async def add_file(message: Message, state: FSMContext, l10n: FluentLocalization
     if file_id and file_type != "unknown":
         await send_localized_message(message, l10n, "contest_data_saved")
     await send_localized_message(message, l10n, "contest_winners_count")
-    await state.set_state(ContestState.contest_winners_count)
+    await state.set_state(CState.contest_winners_count)
 
 
 # Записываем кол-во участников, спрашиваем про время публикации
-@contest_router.message(ContestState.contest_winners_count)
+@contest_router.message(CState.contest_winners_count)
 async def add_winners_count(
     message: Message, state: FSMContext, l10n: FluentLocalization
 ):
@@ -202,13 +164,13 @@ async def add_winners_count(
             "contest_date_clarification",
             reply_markup=await kb.get_publish_keyboard(l10n),
         )
-        await state.set_state(ContestState.contest_post_date)
+        await state.set_state(CState.contest_post_date)
     except ValueError:
         await send_localized_message(message, l10n, "invalid_contest_winners_count")
 
 
 # Записываем время, если опубликовать прямо сейчас6 далее уточняем время завершения
-@contest_router.callback_query(F.data == "publish_now", ContestState.contest_post_date)
+@contest_router.callback_query(F.data == "publish_now", CState.contest_post_date)
 async def add_post_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -228,13 +190,11 @@ async def add_post_date(
             l10n=l10n,
         ),
     )
-    await state.set_state(ContestState.contest_end_date)
+    await state.set_state(CState.contest_end_date)
 
 
 # Выбираем дату завершения, так как пост будет запланированный
-@contest_router.callback_query(
-    F.data == "schedule_post", ContestState.contest_post_date
-)
+@contest_router.callback_query(F.data == "schedule_post", CState.contest_post_date)
 async def add_post_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -250,9 +210,7 @@ async def add_post_date(
     )
 
 
-@contest_router.callback_query(
-    F.data.startswith("calendar:"), ContestState.contest_post_date
-)
+@contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_post_date)
 async def add_post_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -270,7 +228,7 @@ async def add_post_date(
             )
             await callback.answer()
             await send_localized_message(callback, l10n, "get_post_time")
-            await state.set_state(ContestState.contest_post_time)
+            await state.set_state(CState.contest_post_time)
         else:
             # Если дата меньше сегодняшней, показываем сообщение об ошибке
             await callback.answer(
@@ -278,7 +236,7 @@ async def add_post_date(
             )
 
 
-@contest_router.message(ContestState.contest_post_time)
+@contest_router.message(CState.contest_post_time)
 async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocalization):
     try:
         # Получаем текущее время
@@ -303,7 +261,7 @@ async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocaliz
                     l10n=l10n,
                 ),
             )
-            await state.set_state(ContestState.contest_end_date)
+            await state.set_state(CState.contest_end_date)
         else:
             # Время введено некорректно
             await send_localized_message(message, l10n, "error_time_in_past")
@@ -312,9 +270,7 @@ async def add_post_time(message: Message, state: FSMContext, l10n: FluentLocaliz
         await send_localized_message(message, l10n, "error_invalid_time_format")
 
 
-@contest_router.callback_query(
-    F.data.startswith("calendar:"), ContestState.contest_end_date
-)
+@contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_end_date)
 async def add_end_date(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -336,7 +292,7 @@ async def add_end_date(
             )
             await callback.answer()
             await send_localized_message(callback, l10n, "get_end_time")
-            await state.set_state(ContestState.contest_end_time)
+            await state.set_state(CState.contest_end_time)
         else:
             # Если selected_date меньше или равна post_date, отправляем сообщение об ошибке
             await callback.answer(
@@ -344,13 +300,11 @@ async def add_end_date(
             )
 
 
-@contest_router.message(ContestState.contest_end_time)
+@contest_router.message(CState.contest_end_time)
 async def add_end_time(message: Message, state: FSMContext, l10n: FluentLocalization):
     try:
         # Парсим время, введённое пользователем
-        # print(f"Raw input: {message.text}")
         end_time = datetime.strptime(message.text.strip(), "%H:%M").time()
-        # print(f"Parsed end_time: {end_time}")
 
         # Получаем данные из состояния
         data = await state.get_data()
@@ -359,7 +313,6 @@ async def add_end_time(message: Message, state: FSMContext, l10n: FluentLocaliza
         post_time = datetime.strptime(data["post_time"], "%H:%M").time()
         post_date = datetime.strptime(data["post_date"], "%d.%m.%Y").date()
         end_date = datetime.strptime(data["end_date"], "%d.%m.%Y").date()
-        # print(f"Post time: {post_time}, Post date: {post_date}, End date: {end_date}")
 
         # Проверка на совпадение дат
         if post_date == end_date:
@@ -384,7 +337,7 @@ async def add_end_time(message: Message, state: FSMContext, l10n: FluentLocaliza
             "contest_geo_check_required",
             reply_markup=await kb.geo_check_required(l10n),
         )
-        await state.set_state(ContestState.contest_location)
+        await state.set_state(CState.contest_location)
 
     except ValueError as e:
         # Отладка ошибки
@@ -392,7 +345,7 @@ async def add_end_time(message: Message, state: FSMContext, l10n: FluentLocaliza
         await send_localized_message(message, l10n, "error_invalid_time_format")
 
 
-@contest_router.callback_query(F.data == "geo_yes", ContestState.contest_location)
+@contest_router.callback_query(F.data == "geo_yes", CState.contest_location)
 async def add_location(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -402,12 +355,12 @@ async def add_location(
         "contest_location",
         reply_markup=await kb.request_location_keyboard(l10n),
     )
-    await state.set_state(ContestState.contest_location)
+    await state.set_state(CState.contest_location)
 
 
 @contest_router.message(
     F.content_type.in_({ContentType.TEXT, ContentType.LOCATION})
-    and ContestState.contest_location
+    and CState.contest_location
 )
 async def add_location(message: Message, state: FSMContext, l10n: FluentLocalization):
     try:
@@ -439,7 +392,7 @@ async def add_location(message: Message, state: FSMContext, l10n: FluentLocaliza
         # Успешное сохранение данных
         await send_localized_message(message, l10n, "contest_data_saved")
         await send_localized_message(message, l10n, "contest_prizes")
-        await state.set_state(ContestState.contest_prizes)
+        await state.set_state(CState.contest_prizes)
 
     except Exception as e:
         # Логирование ошибки и сообщение пользователю
@@ -447,16 +400,16 @@ async def add_location(message: Message, state: FSMContext, l10n: FluentLocaliza
         await send_localized_message(message, l10n, "error_processing_location")
 
 
-@contest_router.callback_query(F.data == "geo_no", ContestState.contest_location)
+@contest_router.callback_query(F.data == "geo_no", CState.contest_location)
 async def no_add_location(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
     await send_localized_message(callback, l10n, "contest_data_saved")
     await send_localized_message(callback, l10n, "contest_prizes")
-    await state.set_state(ContestState.contest_prizes)
+    await state.set_state(CState.contest_prizes)
 
 
-@contest_router.message(ContestState.contest_prizes)
+@contest_router.message(CState.contest_prizes)
 async def add_prizes(message: Message, state: FSMContext, l10n: FluentLocalization):
     try:
         # Получаем текст из сообщения
@@ -488,7 +441,7 @@ async def add_prizes(message: Message, state: FSMContext, l10n: FluentLocalizati
             "contest_required_channels",
             reply_markup=await kb.get_chat_id(l10n, one_time_keyboard=False),
         )
-        await state.set_state(ContestState.contest_required_channels)
+        await state.set_state(CState.contest_required_channels)
 
     except Exception as e:
         # Обрабатываем любые непредвиденные ошибки
@@ -496,7 +449,7 @@ async def add_prizes(message: Message, state: FSMContext, l10n: FluentLocalizati
         await send_localized_message(message, l10n, "error_processing_prizes")
 
 
-@contest_router.message(ContestState.contest_required_channels)
+@contest_router.message(CState.contest_required_channels)
 async def add_required_channels(
     message: Message, state: FSMContext, l10n: FluentLocalization
 ):
@@ -521,7 +474,7 @@ async def add_required_channels(
                 "contest_channels_done",
                 reply_markup=await kb.publish_now(l10n),
             )
-            await state.set_state(ContestState.contest_confirmation)
+            await state.set_state(CState.contest_confirmation)
             return
 
         # Получаем текущие данные состояния
@@ -555,72 +508,114 @@ async def add_required_channels(
         await send_localized_message(message, l10n, "error_processing_channels")
 
 
-@contest_router.callback_query(F.data == "yes", ContestState.contest_confirmation)
+# @contest_router.callback_query(F.data == "yes", CState.contest_confirmation)
+# async def contest_confirmation(
+#     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
+# ):
+#     await callback.answer("🎉 Confirmation!", show_alert=True)
+#     # Здесь надо сохранить все в БД и дальше работать с данными из БД
+#     data = await state.get_data()
+#     if data["post_time"] == "now":
+#         data["post_time"] = await get_current_datetime()
+#     else:
+#         # Конвертация времени публикации в datetime
+#         data["post_time"] = datetime.strptime(
+#             f"{data['post_date']} {data['post_time']}", "%d.%m.%Y %H:%M"
+#         )
+#     data["end_time"] = datetime.strptime(
+#         f"{data['end_date']} {data['end_time']}", "%d.%m.%Y %H:%M"
+#     )
+#     # Преобразуем datetime в строку для сериализации
+#     serialized_data = {
+#         key: (
+#             value.strftime("%d.%m.%Y %H:%M") if isinstance(value, datetime) else value
+#         )
+#         for key, value in data.items()
+#     }
+#     # Отправка данных в чат конкурса
+#     contest_channel_id = int(data["contest_channel"])  # Преобразуем ID в int
+#     contest_message = "<b>Данные конкурса:</b>\n"
+#
+#     # Форматируем данные для HTML-разметки
+#     for key, value in serialized_data.items():
+#         contest_message += (
+#             f"<b>{key}:</b> {html.escape(str(value))}\n"  # Экранируем символы
+#         )
+#     if data["post"] == "now":
+#         await send_localized_message(callback, l10n, "publish_now_welcome")
+#         # Отправка данных в чат
+#         await callback.bot.send_message(
+#             chat_id=contest_channel_id,
+#             text=contest_message,
+#             reply_markup=await kb.participation(l10n),
+#             parse_mode=ParseMode.HTML,
+#         )
+#     else:
+#         post_date = data["post_time"].strftime("%d.%m.%Y")
+#         post_time = data["post_time"].strftime("%H:%M")
+#
+#         # Формируем текст с локализацией
+#         text = l10n.format_value(
+#             "schedule_welcome", {"date": post_date, "time": post_time}
+#         )
+#         await callback.message.edit_text(text)
+#
+#         # Нужна логика отложенных сообщений, пока заглушка
+#         await callback.bot.send_message(
+#             chat_id=contest_channel_id,
+#             text=text,
+#             parse_mode=ParseMode.HTML,
+#         )
+#
+#     await send_localized_message(
+#         callback, l10n, "welcome_text", reply_markup=await kb.start_menu(l10n)
+#     )
+#     await state.clear()
+@contest_router.callback_query(F.data == "yes", CState.contest_confirmation)
 async def contest_confirmation(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
     await callback.answer("🎉 Confirmation!", show_alert=True)
-    # Здесь надо сохранить все в БД и дальше работать с данными из БД
     data = await state.get_data()
-    if data["post_time"] == "now":
+
+    # Обработка времени публикации
+    if data["post"] == "now":
         data["post_time"] = await get_current_datetime()
     else:
-        # Конвертация времени публикации в datetime
         data["post_time"] = datetime.strptime(
             f"{data['post_date']} {data['post_time']}", "%d.%m.%Y %H:%M"
         )
     data["end_time"] = datetime.strptime(
         f"{data['end_date']} {data['end_time']}", "%d.%m.%Y %H:%M"
     )
-    # Преобразуем datetime в строку для сериализации
-    serialized_data = {
-        key: (
-            value.strftime("%d.%m.%Y %H:%M") if isinstance(value, datetime) else value
-        )
-        for key, value in data.items()
-    }
-    # Отправка данных в чат конкурса
-    contest_channel_id = int(data["contest_channel"])  # Преобразуем ID в int
-    contest_message = "<b>Данные конкурса:</b>\n"
 
-    # Форматируем данные для HTML-разметки
-    for key, value in serialized_data.items():
-        contest_message += (
-            f"<b>{key}:</b> {html.escape(str(value))}\n"  # Экранируем символы
-        )
+    # Сохранение в базу данных
+    contest_id = await save_contest_to_db(data)
+
+    contest_channel_id = int(data["contest_channel"])
+
     if data["post"] == "now":
+        # Публикация сразу
+        await send_contest_post(callback.bot, contest_channel_id, data, l10n)
         await send_localized_message(callback, l10n, "publish_now_welcome")
-        # Отправка данных в чат
-        await callback.bot.send_message(
-            chat_id=contest_channel_id,
-            text=contest_message,
-            reply_markup=await kb.participation(l10n),
-            parse_mode=ParseMode.HTML,
-        )
     else:
+        # Публикация отложена
+        await schedule_contest_post(callback.bot, contest_channel_id, data, l10n)
         post_date = data["post_time"].strftime("%d.%m.%Y")
         post_time = data["post_time"].strftime("%H:%M")
-
-        # Формируем текст с локализацией
         text = l10n.format_value(
             "schedule_welcome", {"date": post_date, "time": post_time}
         )
         await callback.message.edit_text(text)
 
-        # Нужна логика отложенных сообщений, пока заглушка
-        await callback.bot.send_message(
-            chat_id=contest_channel_id,
-            text=text,
-            parse_mode=ParseMode.HTML,
-        )
-
+    # Завершение состояния
     await send_localized_message(
         callback, l10n, "welcome_text", reply_markup=await kb.start_menu(l10n)
     )
     await state.clear()
 
 
-@contest_router.callback_query(F.data == "no", ContestState.contest_confirmation)
+@contest_router.callback_query(F.data == "no", CState.contest_confirmation)
 async def contest_confirmation(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -630,12 +625,10 @@ async def contest_confirmation(
         "contest_cancel_confirmation",
         reply_markup=await kb.publish_now(l10n),
     )
-    await state.set_state(ContestState.contest_cancel_confirmation)
+    await state.set_state(CState.contest_cancel_confirmation)
 
 
-@contest_router.callback_query(
-    F.data == "yes", ContestState.contest_cancel_confirmation
-)
+@contest_router.callback_query(F.data == "yes", CState.contest_cancel_confirmation)
 async def contest_confirmation(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -646,7 +639,7 @@ async def contest_confirmation(
     await state.clear()
 
 
-@contest_router.callback_query(F.data == "no", ContestState.contest_cancel_confirmation)
+@contest_router.callback_query(F.data == "no", CState.contest_cancel_confirmation)
 async def contest_confirmation(
     callback: CallbackQuery, state: FSMContext, l10n: FluentLocalization
 ):
@@ -656,4 +649,4 @@ async def contest_confirmation(
         "contest_repeat_confirmation",
         reply_markup=await kb.publish_now(l10n),
     )
-    await state.set_state(ContestState.contest_confirmation)
+    await state.set_state(CState.contest_confirmation)

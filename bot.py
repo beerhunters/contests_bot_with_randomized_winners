@@ -5,17 +5,21 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from dotenv import load_dotenv
 
-from database.models import init_db
 from handlers.contest import contest_router
+
+# from database.models import init_db
+# from handlers.contest import contest_router
 from handlers.contest_for_users import contest_for_users
 from handlers.my_contest import my_contest_router
 from handlers.start import start_router
 from middlewares.localization import L10nMiddleware
 
 from tools.logger import logger
+from tools.scheduler import scheduler
 
 
 async def main():
@@ -45,6 +49,9 @@ async def main():
     bot_commands = [BotCommand(command="/start", description="Запустить бота")]
     await bot.set_my_commands(bot_commands)
 
+    # Запускаем планировщик в контексте `asyncio`
+    scheduler.start()
+
     # Starting the bot
     try:
         logger.info("Бот запущен и работает...")
@@ -52,6 +59,7 @@ async def main():
     except Exception as e:
         logger.error(f"Ошибка при работе бота: {e}")
     finally:
+        scheduler.shutdown()  # Останавливаем планировщик перед завершением работы бота
         await bot.session.close()
 
 
