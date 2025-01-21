@@ -1,13 +1,9 @@
-from datetime import datetime
 import html
 
 from aiogram.enums import ParseMode
 
 from tools.scheduler import scheduler
 import keyboards.keyboards as kb
-
-
-# from scheduler import scheduler  # Импорт глобального планировщика
 
 
 async def save_contest_to_db(data: dict) -> int:
@@ -17,24 +13,22 @@ async def save_contest_to_db(data: dict) -> int:
     return contest_id
 
 
-async def format_contest_message(data: dict) -> str:
+async def format_contest_message(data: dict, l10n) -> str:
     """Форматирует сообщение для конкурса."""
-    contest_message = "<b>Данные конкурса:</b>\n"
-    contest_message += f"<b>Описание:</b> {html.escape(data['contest_text'])}\n"
-    contest_message += (
-        f"<b>Завершение:</b> {data['end_time'].strftime('%d.%m.%Y %H:%M')}\n"
-    )
+    contest_message = f"{l10n.format_value('contest_title')}\n"
+    contest_message += f"{l10n.format_value('contest_description')} {html.escape(data['contest_text'])}\n"
+    contest_message += f"{l10n.format_value('contest_end_time')} {data['end_time'].strftime('%d.%m.%Y %H:%M')}\n"
     return contest_message
 
 
 async def send_contest_post(bot, channel_id: int, data: dict, l10n):
     """Отправляет пост в канал с учетом наличия медиа."""
     # Используем функцию для форматирования сообщения
-    text = await format_contest_message(data)
+    text = await format_contest_message(data, l10n)
 
     # Проверяем наличие медиа и отправляем соответствующее сообщение
     media = data.get("file_id")
-    if media != "unknown":
+    if media is not None:
         await bot.send_photo(
             chat_id=channel_id,
             photo=media,

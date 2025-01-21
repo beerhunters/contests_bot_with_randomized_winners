@@ -1,7 +1,5 @@
-import html
-
 from aiogram import Router, F
-from aiogram.enums import ContentType, ChatMemberStatus, ParseMode
+from aiogram.enums import ContentType, ChatMemberStatus
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery
@@ -139,10 +137,10 @@ async def add_file(message: Message, state: FSMContext, l10n: FluentLocalization
         file_type = "gif"
         await state.update_data(file_id=file_id, file_type=file_type)
     else:
-        file_id = "unknown"
-        file_type = "unknown"
+        file_id = None
+        file_type = None
         await state.update_data(file_id=file_id, file_type=file_type)
-    if file_id and file_type != "unknown":
+    if file_id and file_type is not None:
         await send_localized_message(message, l10n, "contest_data_saved")
     await send_localized_message(message, l10n, "contest_winners_count")
     await state.set_state(CState.contest_winners_count)
