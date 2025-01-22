@@ -549,11 +549,7 @@ async def add_location(message: Message, state: FSMContext, l10n: FluentLocaliza
 
             # Сохраняем локацию во временное состояние FSM
             await state.update_data(latitude=latitude, longitude=longitude)
-
-            # print(
-            #     f"Геолокация успешно сохранена:\n"
-            #     f"Широта: {latitude}\nДолгота: {longitude}",
-            # )
+            await message.delete()
         else:
             # Если получен текст вместо локации
             await send_localized_message(message, l10n, "error_location_required")
@@ -615,7 +611,6 @@ async def add_prizes(message: Message, state: FSMContext, l10n: FluentLocalizati
 
     except Exception as e:
         # Обрабатываем любые непредвиденные ошибки
-        # print(f"Ошибка обработки призов: {e}")
         await send_localized_message(message, l10n, "error_processing_prizes")
 
 
@@ -761,28 +756,9 @@ async def contest_confirmation(
     # Сохранение в базу данных
     # contest_id = await save_contest_to_db(data)
 
-    # print(json.dumps(data, indent=4, ensure_ascii=False))
-
-    # {
-    #     "contest_channel": -1002350206500,
-    #     "required_channels": [
-    #         "-1002350206500"
-    #     ],
-    #     "contest_text": "Описание",
-    #     "file_id": null,
-    #     "file_type": null,
-    #     "winners_count": 1,
-    #     "post_date": "21.01.2025",
-    #     "post_time": "2025-01-21 17:24",
-    #     "post": "now",
-    #     "end_date": "22.01.2025",
-    #     "end_time": "22.01.2025 10:00",
-    #     "latitude": 59.942618,
-    #     "longitude": 30.25839,
-    #     "prizes": [
-    #         "Приз"
-    #     ]
-    # }
+    # Перебор и вывод всех ключей и значений
+    for key, value in data.items():
+        print(f"{key}: {value}")
 
     contest_channel_id = int(data["contest_channel"])
 
