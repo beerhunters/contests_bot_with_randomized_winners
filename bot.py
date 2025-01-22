@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from handlers.contest import contest_router
 
 from handlers.contest_for_users import contest_for_users
+from handlers.edit_contest import edit_contest
 from handlers.my_contest import my_contest_router
 from handlers.start import start_router
 
@@ -44,6 +45,7 @@ async def main():
         contest_router,
         my_contest_router,
         contest_for_users,
+        edit_contest,
     )
 
     # Commands registration

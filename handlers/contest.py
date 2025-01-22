@@ -26,7 +26,7 @@ time_picker = TimePicker()
 
 class CState(StatesGroup):
     contest_channel = State()
-    contest_text = State()
+    contest_description = State()
     contest_file = State()
     contest_winners_count = State()
     contest_post_date = State()
@@ -106,17 +106,17 @@ async def add_channel(message: Message, state: FSMContext, l10n: FluentLocalizat
     await state.update_data(required_channels=required_channels)
 
     await send_localized_message(message, l10n, "contest_data_saved")
-    await send_localized_message(message, l10n, "contest_text")
-    await state.set_state(CState.contest_text)
+    await send_localized_message(message, l10n, "contest_description")
+    await state.set_state(CState.contest_description)
 
 
 # Записываем описание, спрашиваем про файл
-@contest_router.message(CState.contest_text)
+@contest_router.message(CState.contest_description)
 async def add_description(
     message: Message, state: FSMContext, l10n: FluentLocalization
 ):
-    contest_text = message.text
-    await state.update_data(contest_text=contest_text)
+    contest_description = message.text
+    await state.update_data(contest_description=contest_description)
     await send_localized_message(message, l10n, "contest_data_saved")
     await send_localized_message(message, l10n, "contest_file")
     await state.set_state(CState.contest_file)
@@ -158,7 +158,7 @@ async def add_winners_count(
 ):
     try:
         winners_count = int(message.text)
-        await state.update_data(winners_count=winners_count)
+        await state.update_data(winners_count=winners_count, status="draft")
         await send_localized_message(message, l10n, "contest_data_saved")
         # Спрашиваем, опубликовать сейчас или запланировать
         await send_localized_message(
@@ -644,6 +644,9 @@ async def add_required_channels(
         # Если пользователь отправил команду "/stop", завершаем процесс и переходим к следующему этапу
         if required_channels_text == "/stop":
 
+            # Сохранение в базу данных
+            # contest_id = await save_contest_to_db(data)
+
             data = await state.get_data()
             text = "\n".join(f"{key}: {value}" for key, value in data.items())
             await send_localized_message(message, l10n, "sample_contest", postfix=text)
@@ -768,16 +771,6 @@ async def contest_confirmation(
     data["end_time"] = datetime.strptime(
         f"{data['end_date']} {data['end_time']}", "%d.%m.%Y %H:%M"
     )
-
-    # Сохранение в базу данных
-    # contest_id = await save_contest_to_db(data)
-
-    # # Перебор и вывод всех ключей и значений
-    # for key, value in data.items():
-    #     print(f"{key}: {value}")
-    # Формируем текст из содержимого словаря data
-    # text = "\n".join(f"{key}: {value}" for key, value in data.items())
-    # await send_localized_message(callback, l10n, "sample_contest", postfix=text)
 
     contest_channel_id = int(data["contest_channel"])
 

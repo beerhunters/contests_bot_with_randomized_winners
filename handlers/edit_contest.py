@@ -1,3 +1,7 @@
+from aiogram import Router
+
+edit_contest = Router()
+
 # "draw": {
 # 		"back_in_menu": "Назад в главное меню ↩️",
 # 		"back": "Назад ↩️",

@@ -6,18 +6,11 @@ from tools.scheduler import scheduler
 import keyboards.keyboards as kb
 
 
-async def save_contest_to_db(data: dict) -> int:
-    """Сохраняет данные конкурса в базу данных и возвращает ID записи."""
-    # Здесь добавьте свою логику сохранения данных в БД
-    contest_id = 1  # Пример ID записи
-    return contest_id
-
-
 async def format_contest_message(data: dict, l10n) -> str:
     """Форматирует сообщение для конкурса."""
-    contest_message = f"{l10n.format_value('contest_title')}\n"
-    contest_message += f"{l10n.format_value('contest_description')} {html.escape(data['contest_text'])}\n"
-    contest_message += f"{l10n.format_value('contest_end_time')} {data['end_time'].strftime('%d.%m.%Y %H:%M')}\n"
+    contest_message = f"{l10n.format_value('created_contest_title')}\n"
+    contest_message += f"{l10n.format_value('created_contest_description')} {html.escape(data['contest_description'])}\n"
+    contest_message += f"{l10n.format_value('created_contest_end_time')} {data['end_time'].strftime('%d.%m.%Y %H:%M')}\n"
     return contest_message
 
 
