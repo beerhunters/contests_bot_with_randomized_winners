@@ -20,7 +20,7 @@ import keyboards.keyboards as kb
 import keyboards.calendar_keyboard.custom_calendar as cl
 
 contest_router = Router()
-# time_picker = TimePicker()
+time_picker = TimePicker()
 # calendar = cl.CustomCalendar()
 
 
@@ -231,12 +231,12 @@ async def add_post_date(
                 callback, l10n, "contest_data_saved", show_alert=True
             )
             await callback.answer()
-            time_picker = TimePicker()
+            # time_picker = TimePicker()
             await send_localized_message(
                 callback,
                 l10n,
                 "get_post_time",
-                reply_markup=await time_picker.create_time_keyboard(),
+                reply_markup=await time_picker.create_time_keyboard(l10n),
             )
             await state.set_state(CState.contest_post_time)
         else:
@@ -297,8 +297,21 @@ async def add_post_time(
     l10n: FluentLocalization,
     callback_data: TimeCallback,
 ):
-    time_picker = TimePicker()
-    post_time = await time_picker.handle_time_callback(callback, callback_data)
+    # time_picker = TimePicker()
+    post_time = await time_picker.handle_time_callback(callback, callback_data, l10n)
+
+    if post_time:
+        # Проверяем корректность времени
+        hours, minutes = map(int, post_time.split(":"))
+        if 0 <= hours <= 23 and 0 <= minutes <= 59:
+            await callback.answer(
+                f"{l10n.format_value('post_end_time')} {post_time}", show_alert=True
+            )
+        else:
+            await callback.answer(
+                f"{l10n.format_value('error_post_end_time')}", show_alert=True
+            )
+
     try:
         if post_time:
             # Получаем текущее время
@@ -326,10 +339,20 @@ async def add_post_time(
                 await state.set_state(CState.contest_end_date)
             else:
                 # Время введено некорректно
-                await send_localized_message(callback, l10n, "error_time_in_past")
+                await send_localized_message(
+                    callback,
+                    l10n,
+                    "error_time_in_past",
+                    reply_markup=await time_picker.create_time_keyboard(l10n),
+                )
     except ValueError:
         # Если формат времени некорректный
-        await send_localized_message(callback, l10n, "error_invalid_time_format")
+        await send_localized_message(
+            callback,
+            l10n,
+            "error_invalid_time_format",
+            reply_markup=await time_picker.create_time_keyboard(l10n),
+        )
 
 
 # @contest_router.callback_query(F.data.startswith("calendar:"), CState.contest_end_date)
@@ -354,12 +377,12 @@ async def add_end_date(
                 callback, l10n, "contest_data_saved", show_alert=True
             )
             await callback.answer()
-            time_picker = TimePicker()
+            # time_picker = TimePicker()
             await send_localized_message(
                 callback,
                 l10n,
                 "get_end_time",
-                reply_markup=await time_picker.create_time_keyboard(),
+                reply_markup=await time_picker.create_time_keyboard(l10n),
             )
             await state.set_state(CState.contest_end_time)
         else:
@@ -421,9 +444,20 @@ async def add_end_time(
     l10n: FluentLocalization,
     callback_data: TimeCallback,
 ):
-    time_picker = TimePicker()
+    # time_picker = TimePicker()
     # Получаем время из обработчика
-    end_time = await time_picker.handle_time_callback(callback, callback_data)
+    end_time = await time_picker.handle_time_callback(callback, callback_data, l10n)
+    if end_time:
+        # Проверяем корректность времени
+        hours, minutes = map(int, end_time.split(":"))
+        if 0 <= hours <= 23 and 0 <= minutes <= 59:
+            await callback.answer(
+                f"{l10n.format_value('post_end_time')} {end_time}", show_alert=True
+            )
+        else:
+            await callback.answer(
+                f"{l10n.format_value('error_post_end_time')}", show_alert=True
+            )
     try:
         if end_time:
             # Преобразуем строку в объект времени
@@ -443,11 +477,20 @@ async def add_end_time(
 
                 # Проверяем разницу во времени
                 if end_datetime - post_datetime < timedelta(minutes=10):
-                    await send_localized_message(callback, l10n, "error_time_too_close")
+                    await send_localized_message(
+                        callback,
+                        l10n,
+                        "error_time_too_close",
+                        reply_markup=await time_picker.create_time_keyboard(l10n),
+                    )
                     return
 
             elif post_date > end_date:
-                await send_localized_message(callback, l10n, "error_invalid_date_order")
+                await send_localized_message(
+                    callback,
+                    l10n,
+                    "error_invalid_date_order",
+                )
                 return
 
             # Сохраняем данные, если все проверки пройдены
@@ -464,7 +507,12 @@ async def add_end_time(
             await state.set_state(CState.contest_location)
 
     except ValueError as e:
-        await send_localized_message(callback, l10n, "error_invalid_time_format")
+        await send_localized_message(
+            callback,
+            l10n,
+            "error_invalid_time_format",
+            reply_markup=await time_picker.create_time_keyboard(l10n),
+        )
 
 
 @contest_router.callback_query(F.data == "geo_yes", CState.contest_location)
