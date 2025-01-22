@@ -111,3 +111,5 @@ contest_title = <b>Розыгрыш</b>
 contest_description = <b>Описание и условия:</b>
 contest_end_time = <b>Время окончания розыгрыша:</b>
 participation = ✋ Участвую!
+
+sample_contest = Ваши данные:

@@ -1,7 +1,7 @@
 import json
 
 from aiogram import Router, F
-from aiogram.enums import ContentType, ChatMemberStatus
+from aiogram.enums import ContentType, ChatMemberStatus, ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery
@@ -307,11 +307,16 @@ async def add_post_time(
             await callback.answer(
                 f"{l10n.format_value('post_end_time')} {post_time}", show_alert=True
             )
+            # await send_localized_message(
+            #     callback, l10n, "post_end_time", show_alert=True
+            # )
         else:
             await callback.answer(
                 f"{l10n.format_value('error_post_end_time')}", show_alert=True
             )
-
+            # await send_localized_message(
+            #     callback, l10n, "error_post_end_time", show_alert=True
+            # )
     try:
         if post_time:
             # Получаем текущее время
@@ -454,10 +459,16 @@ async def add_end_time(
             await callback.answer(
                 f"{l10n.format_value('post_end_time')} {end_time}", show_alert=True
             )
+            # await send_localized_message(
+            #     callback, l10n, "post_end_time", show_alert=True
+            # )
         else:
             await callback.answer(
                 f"{l10n.format_value('error_post_end_time')}", show_alert=True
             )
+            # await send_localized_message(
+            #     callback, l10n, "error_post_end_time", show_alert=True
+            # )
     try:
         if end_time:
             # Преобразуем строку в объект времени
@@ -632,6 +643,11 @@ async def add_required_channels(
 
         # Если пользователь отправил команду "/stop", завершаем процесс и переходим к следующему этапу
         if required_channels_text == "/stop":
+
+            data = await state.get_data()
+            text = "\n".join(f"{key}: {value}" for key, value in data.items())
+            await send_localized_message(message, l10n, "sample_contest", postfix=text)
+
             # Завершаем сбор каналов и переходим к следующему шагу
             await send_localized_message(
                 message,
@@ -756,9 +772,12 @@ async def contest_confirmation(
     # Сохранение в базу данных
     # contest_id = await save_contest_to_db(data)
 
-    # Перебор и вывод всех ключей и значений
-    for key, value in data.items():
-        print(f"{key}: {value}")
+    # # Перебор и вывод всех ключей и значений
+    # for key, value in data.items():
+    #     print(f"{key}: {value}")
+    # Формируем текст из содержимого словаря data
+    # text = "\n".join(f"{key}: {value}" for key, value in data.items())
+    # await send_localized_message(callback, l10n, "sample_contest", postfix=text)
 
     contest_channel_id = int(data["contest_channel"])
 
